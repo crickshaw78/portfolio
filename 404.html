@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, follow" />
+  <title>404 — Not Found · Christopher Renshaw</title>
+  <meta name="description" content="The page you were looking for could not be found." />
+  <link rel="canonical" href="https://crickshaw.dev/404.html" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070708'/%3E%3Ctext x='50%25' y='54%25' font-family='Inter,Arial,sans-serif' font-size='34' font-weight='700' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'%3ECR%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #070708;
+      color: #e6e6e9;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 520px; text-align: center; }
+    .code {
+      font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      font-size: 13px;
+      color: #54545b;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    h1 { font-size: clamp(36px, 6vw, 56px); font-weight: 700; letter-spacing: -0.025em; margin-bottom: 14px; line-height: 1.1; }
+    .hint { color: #8a8a92; font-size: 16px; margin-bottom: 28px; }
+    .hint .accent { color: #c9a46a; font-style: italic; }
+    a.btn {
+      display: inline-block;
+      padding: 12px 22px;
+      background: #e6e6e9;
+      color: #070708;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background .2s ease;
+    }
+    a.btn:hover { background: #fff; }
+    .term {
+      margin-top: 36px;
+      padding: 14px 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      background: #0a0a0c;
+      font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      font-size: 12.5px;
+      color: #b6b6bd;
+      text-align: left;
+    }
+    .term .mt { color: #54545b; }
+    .term .ko { color: #b06b5a; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="code">Error · 404</p>
+    <h1>This page <span style="color:#c9a46a;font-style:italic;font-weight:500">went offline.</span></h1>
+    <p class="hint">The URL you requested doesn't exist on <code>crickshaw.dev</code>. It may have moved, or the link you followed may be wrong.</p>
+    <a class="btn" href="/">← Back to homepage</a>
+
+    <div class="term" aria-hidden="true">
+      <span class="mt">$</span> curl -I https://crickshaw.dev<span id="path"></span><br/>
+      <span class="mt">HTTP/2</span> <span class="ko">404</span>  <span class="mt">Not Found</span>
+    </div>
+  </main>
+  <script>
+    document.getElementById('path').textContent = location.pathname;
+  </script>
+</body>
+</html>

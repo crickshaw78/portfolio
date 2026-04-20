@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Embedded Android: shipping a 10-inch console used in $500M of equipment — Christopher Renshaw</title>
+  <meta name="description" content="What changes when an Android app stops being a phone app and becomes the operating system on a fitness machine? At Octane Fitness we migrated the Smart Console from Angular hybrid to native Android. These are the architectural decisions that survived production." />
+  <meta name="keywords" content="embedded Android, Android NDK, fitness console, Octane Fitness Smart Console, BLE machine control, firmware OTA Android, Android Things, embedded Linux, Kotlin embedded" />
+  <meta name="author" content="Christopher Renshaw" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="canonical" href="https://crickshaw.dev/notes/embedded-android-smart-console/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Embedded Android: shipping a 10-inch console used in $500M of equipment" />
+  <meta property="og:description" content="The architectural decisions behind the Octane Fitness Smart Console — native Android on commercial fitness hardware." />
+  <meta property="og:url" content="https://crickshaw.dev/notes/embedded-android-smart-console/" />
+  <meta property="og:image" content="https://crickshaw.dev/images/profile.png" />
+  <meta property="article:published_time" content="2026-04-18" />
+  <meta property="article:author" content="Christopher Renshaw" />
+  <meta property="article:tag" content="Embedded Android" />
+  <meta property="article:tag" content="BLE" />
+  <meta property="article:tag" content="Firmware OTA" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Embedded Android: shipping a 10-inch console" />
+  <meta name="twitter:description" content="Native Android on commercial fitness hardware. The decisions that survived production." />
+  <meta name="twitter:image" content="https://crickshaw.dev/images/profile.png" />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070708'/%3E%3Ctext x='50%25' y='54%25' font-family='Inter,Arial,sans-serif' font-size='34' font-weight='700' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'%3ECR%3C/text%3E%3C/svg%3E" />
+  <link rel="manifest" href="../../site.webmanifest" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Embedded Android: shipping a 10-inch console used in $500M of equipment",
+    "description": "Architectural decisions behind the Octane Fitness Smart Console — migrating from Angular hybrid to native Android, custom BLE libraries for real-time machine control, and firmware OTA on commercial hardware.",
+    "datePublished": "2026-04-18",
+    "dateModified": "2026-04-18",
+    "wordCount": 1100,
+    "keywords": "embedded Android, Android NDK, BLE, firmware OTA, fitness console",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Renshaw",
+      "url": "https://crickshaw.dev/"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Christopher Renshaw"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://crickshaw.dev/notes/embedded-android-smart-console/"
+    },
+    "image": "https://crickshaw.dev/images/profile.png"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://crickshaw.dev/" },
+      { "@type": "ListItem", "position": 2, "name": "Notes", "item": "https://crickshaw.dev/notes/" },
+      { "@type": "ListItem", "position": 3, "name": "Embedded Android Smart Console" }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-grid"></div>
+  </div>
+
+  <div class="post-shell">
+    <header class="post-top">
+      <a href="../../index.html" class="post-back">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Christopher Renshaw
+      </a>
+      <a href="../index.html" class="post-crumb post-crumb--link">Notes</a>
+    </header>
+
+    <article class="post">
+      <p class="post-kicker">Field note · Embedded Android · BLE</p>
+      <h1 class="post-title">Embedded Android: shipping a 10-inch console used in <span class="accent">$500M of equipment.</span></h1>
+      <p class="post-meta">
+        <time datetime="2026-04-18">April 18, 2026</time>
+        <span>·</span><span>10 min read</span>
+        <span>·</span><span>by Christopher Renshaw</span>
+      </p>
+
+      <p class="post-lede">From 2014 to 2017 I led Android development on the Octane Fitness Smart Console — a 10-inch capacitive touchscreen embedded in six commercial machine lines (XT-One, ZR8000, Lateral X, XR6000, XT3700, XT4700). It was at CES. It powered roughly half a billion dollars in equipment sales. It is still in production after Octane's acquisition by TRUE Fitness. These are the decisions that made it stick.</p>
+
+      <h2>The first decision: stop pretending it's a phone</h2>
+      <p>The console inherited an Angular-based hybrid app running in a WebView. On paper that was reasonable — fast to iterate, web devs available. In practice the device was on twelve hours a day, garbage collected on its feet, and was responsible for actual physical hardware. WebView animations stuttered when the user adjusted resistance. Tap latency was visible. The bridge between JS and the machine controller was a black box of dropped messages.</p>
+      <p>We migrated to fully native Android (Java first, then Kotlin) targeting the embedded SoC directly. UI in stock Android views, BLE in <code>BluetoothGatt</code>, machine I/O via the NDK. The migration took the better part of a year. Performance, hardware integration depth, and crash rate all improved by an order of magnitude.</p>
+      <p>If you take one thing from this post: <strong>WebView is a fine choice for content surfaces, never for hardware control surfaces.</strong></p>
+
+      <h2>The second decision: own the BLE library</h2>
+      <p>The machine controller spoke a vendor BLE protocol with three custom GATT services — workout telemetry (calories, distance, speed, RPM), resistance control (write target, read actual), and OTA. We had to talk to it 20+ times per second during a workout. The off-the-shelf reactive BLE wrappers we tried added latency, hid errors, and assumed phone-app patterns that didn't apply.</p>
+      <p>We wrote our own thin library on top of <code>BluetoothGatt</code>. Three rules:</p>
+      <ul class="post-ul">
+        <li><strong>One operation in flight, ever.</strong> A serial executor wrapping every read, write, and notification setup. The Android stack is single-threaded under the hood; pretending it isn't is the source of half of all "intermittent BLE bugs."</li>
+        <li><strong>Hot stream of measurements, cold stream of control.</strong> Telemetry is a fire-hose Flow that the UI subscribes to. Resistance/incline/gradient writes are explicit one-shots that resolve to a confirmed-applied event from the controller.</li>
+        <li><strong>Every operation has a hard timeout.</strong> If a write doesn't ack in 250 ms, fail it loudly. A 30-second hang on resistance change in front of a paying gym member is unacceptable.</li>
+      </ul>
+
+      <h2>OTA: signed, resumable, atomic</h2>
+      <p>The OTA pipeline pushed firmware to the machine controller through the console. Because failure was expensive — a bricked controller meant a service truck visit — three properties were non-negotiable:</p>
+      <ol class="post-ol">
+        <li><strong>Signed.</strong> Each firmware blob shipped with a manufacturer-signed manifest. The console verified the signature before sending the first byte over BLE. <code>signature=ok</code> in the log was a hard gate.</li>
+        <li><strong>Resumable.</strong> A full firmware image over BLE is a long write — minutes, not seconds, even under favorable connection parameters. Members lean on consoles. The wire protocol carried per-chunk sequence numbers so a dropped link picked up at the next boundary, not from zero.</li>
+        <li><strong>Atomic activation.</strong> Bytes were written to a staging slot. The "switch to new firmware" step was a single-byte command at the end. Either the controller booted into the new image successfully, or it rolled back. No half-flashed states.</li>
+      </ol>
+      <p>The boring discipline of staging + atomic switch is what kept us out of the support backlog. None of it is hard to implement; all of it is easy to skip.</p>
+
+      <h2>Persistence: the device is the source of truth</h2>
+      <p>A console is not a phone. There's no user account on the box. Members swipe a key fob, do their workout, and the data needs to live somewhere reliable until the gym's network sync window. We used SQLite directly with a small repository layer; a write returned only after a successful <code>fsync</code>. The cloud sync was a separate process that operated on rows that had already landed durably on disk.</p>
+      <p>The pattern: <strong>every external system is best-effort, the device is authoritative.</strong> Reverse those defaults and you'll lose data the first time a gym's WiFi has a bad day.</p>
+
+      <h2>What I'd do differently today</h2>
+      <ul class="post-ul">
+        <li><strong>Start in Kotlin.</strong> We started in Java and migrated mid-project. Six months of work that gave us nothing the user could see. If I were starting today, Kotlin from line one, no question.</li>
+        <li><strong>Compose for the UI.</strong> Stock Android views were the right call in 2015. Today, Compose-on-embedded with proper hardware acceleration is the move — easier state modeling for a stateful piece of hardware.</li>
+        <li><strong>Tighter telemetry budget.</strong> We initially logged everything. Embedded Android with weeks of uptime accumulates astonishing log volumes. Define the SLI you actually care about up front and discard the rest.</li>
+        <li><strong>Plan the kiosk story earlier.</strong> Locking the device down — disabling status bar, recents, system gestures — is non-trivial on consumer Android builds and was a late-stage scramble. Build it in from week one or pick an OEM that ships a kiosk-ready image.</li>
+      </ul>
+
+      <h2>Bottom line</h2>
+      <p>Embedded Android lives in the gap between two professional cultures. Phone-app teams underestimate the rigor that hardware demands; firmware teams underestimate how much app polish a touchscreen surface needs. The work is rarely glamorous — it's tight loops around BLE, careful persistence, and OTA boredom — but the result is a product that runs unattended for years.</p>
+
+      <footer class="post-foot">
+        <p class="post-foot__bio">By <strong>Christopher Renshaw</strong> — Senior Mobile Software Engineer based in Miami, FL. Android Development Lead at Octane Fitness (2014 – 2017) for the Smart Console — featured at CES, shipped across six commercial machine lines, contributing to $500M+ in equipment sales worldwide.</p>
+        <p class="post-foot__cta">
+          <a href="../../index.html#contact">Hire me for embedded mobile engineering ↗</a>
+          <a href="../index.html">All notes ↗</a>
+        </p>
+      </footer>
+    </article>
+
+    <aside class="post-related" aria-label="Related notes">
+      <p class="post-kicker">Read next</p>
+      <ul>
+        <li><a href="../android-ble-gatt-error-133/index.html">Surviving GATT_ERROR 133 on Android BLE</a></li>
+        <li><a href="../dexcom-g6-android-backfill/index.html">Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence</a></li>
+      </ul>
+    </aside>
+  </div>
+
+</body>
+</html>

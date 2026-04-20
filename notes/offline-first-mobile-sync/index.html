@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Offline-first mobile sync — the pattern that survived ship Wi-Fi — Christopher Renshaw</title>
+  <meta name="description" content="At Carnival Cruise Line we shipped Android apps that processed thousands of passengers daily on networks that disappeared without warning. Here's the offline-first sync pattern — Room as the source of truth, WorkManager as the sink, and the conflict-resolution rules that kept the line moving." />
+  <meta name="keywords" content="offline-first Android, mobile sync pattern, Room WorkManager, Android offline architecture, Carnival shipboard apps, conflict resolution mobile, Kotlin offline-first, native iOS offline sync, Core Data background sync" />
+  <meta name="author" content="Christopher Renshaw" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="canonical" href="https://crickshaw.dev/notes/offline-first-mobile-sync/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Offline-first mobile sync — the pattern that survived ship Wi-Fi" />
+  <meta property="og:description" content="Room as source of truth, WorkManager as sink, and the conflict-resolution rules that shipped at Carnival Cruise Line." />
+  <meta property="og:url" content="https://crickshaw.dev/notes/offline-first-mobile-sync/" />
+  <meta property="og:image" content="https://crickshaw.dev/images/profile.png" />
+  <meta property="article:published_time" content="2026-04-22" />
+  <meta property="article:author" content="Christopher Renshaw" />
+  <meta property="article:tag" content="Android" />
+  <meta property="article:tag" content="iOS" />
+  <meta property="article:tag" content="Architecture" />
+  <meta property="article:tag" content="Offline-first" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Offline-first mobile sync — the pattern" />
+  <meta name="twitter:description" content="The architecture that processed thousands of Carnival passengers on flaky ship networks." />
+  <meta name="twitter:image" content="https://crickshaw.dev/images/profile.png" />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070708'/%3E%3Ctext x='50%25' y='54%25' font-family='Inter,Arial,sans-serif' font-size='34' font-weight='700' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'%3ECR%3C/text%3E%3C/svg%3E" />
+  <link rel="manifest" href="../../site.webmanifest" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Offline-first mobile sync — the pattern that survived ship Wi-Fi",
+    "description": "The offline-first architecture I led at Carnival Cruise Line — Room as the source of truth, WorkManager as the sync sink, and the conflict-resolution rules that kept embarkation moving when ship networks disappeared.",
+    "datePublished": "2026-04-22",
+    "dateModified": "2026-04-22",
+    "wordCount": 1050,
+    "keywords": "Android, iOS, offline-first, Room, WorkManager, Carnival, architecture",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Renshaw",
+      "url": "https://crickshaw.dev/"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Christopher Renshaw"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://crickshaw.dev/notes/offline-first-mobile-sync/"
+    },
+    "image": "https://crickshaw.dev/images/profile.png"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://crickshaw.dev/" },
+      { "@type": "ListItem", "position": 2, "name": "Notes", "item": "https://crickshaw.dev/notes/" },
+      { "@type": "ListItem", "position": 3, "name": "Offline-first mobile sync" }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-grid"></div>
+  </div>
+
+  <div class="post-shell">
+    <header class="post-top">
+      <a href="../../index.html" class="post-back">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Christopher Renshaw
+      </a>
+      <a href="../index.html" class="post-crumb post-crumb--link">Notes</a>
+    </header>
+
+    <article class="post">
+      <p class="post-kicker">Field note · Android · iOS · Architecture</p>
+      <h1 class="post-title">Offline-first mobile sync — <span class="accent">the pattern that survived ship Wi-Fi.</span></h1>
+      <p class="post-meta">
+        <time datetime="2026-04-22">April 22, 2026</time>
+        <span>·</span><span>9 min read</span>
+        <span>·</span><span>by Christopher Renshaw</span>
+      </p>
+
+      <p class="post-lede">At Carnival Cruise Line we shipped Android apps that processed thousands of passengers a day in port and onboard. The catch: ship networks disappear without warning. The rule was hard — boarding cannot stop because the Wi-Fi did. This is the offline-first architecture that delivered, and the same pattern I'd reach for in any healthcare or field-operations mobile app.</p>
+
+      <h2>The principle that organizes everything else</h2>
+      <p>Most mobile apps are network-first. The user taps something, you call an endpoint, you get a response, you render. That works fine in an office. It collapses on a cruise ship.</p>
+      <p>Offline-first inverts the relationship: <strong>the local database is the source of truth, the network is a sync sink.</strong> Every user action writes to local storage immediately and returns. A separate process — usually <code>WorkManager</code> on Android, <code>BackgroundTasks</code> on iOS — picks up unsynced rows and tries to push them when the network is up.</p>
+      <p>The UI never awaits the network. It binds to the database. That sentence is the whole architecture.</p>
+
+      <h2>The shape, in one diagram's worth of words</h2>
+      <ol class="post-ol">
+        <li>User action → Repository → Room (or Core Data on iOS) — synchronous, sub-millisecond.</li>
+        <li>Repository emits a row with <code>sync_state = PENDING</code>.</li>
+        <li>UI re-renders from the Room <code>Flow</code>. The user sees their action immediately.</li>
+        <li>WorkManager job, scheduled with a network constraint, drains <code>PENDING</code> rows to the backend.</li>
+        <li>On success, mark <code>sync_state = SYNCED</code>. On failure, leave <code>PENDING</code> with a retry counter.</li>
+      </ol>
+
+      <pre class="code-pane is-active"><code><span class="t-c">// Sync worker — runs only when network is available, retries with backoff.</span>
+<span class="t-k">class</span> <span class="t-t">SyncWorker</span>(ctx: <span class="t-t">Context</span>, params: <span class="t-t">WorkerParameters</span>) :
+        <span class="t-t">CoroutineWorker</span>(ctx, params) {
+
+    <span class="t-k">override suspend fun</span> <span class="t-f">doWork</span>(): <span class="t-t">Result</span> {
+        <span class="t-k">val</span> pending = boardings.<span class="t-f">pendingSync</span>(limit = <span class="t-k">50</span>)
+        <span class="t-k">var</span> failed = <span class="t-k">0</span>
+
+        <span class="t-k">for</span> (row <span class="t-k">in</span> pending) {
+            <span class="t-k">try</span> {
+                <span class="t-k">val</span> resp = api.<span class="t-f">push</span>(row.<span class="t-f">toDto</span>())
+                boardings.<span class="t-f">markSynced</span>(row.id, resp.serverId)
+            } <span class="t-k">catch</span> (e: <span class="t-t">IOException</span>) {
+                failed++
+                boardings.<span class="t-f">incrementRetry</span>(row.id)
+            }
+        }
+
+        <span class="t-k">return if</span> (failed &gt; <span class="t-k">0</span>) <span class="t-t">Result</span>.<span class="t-f">retry</span>() <span class="t-k">else</span> <span class="t-t">Result</span>.<span class="t-f">success</span>()
+    }
+}</code></pre>
+
+      <h2>The five rules that matter more than the code</h2>
+
+      <h3>1. Generate IDs on the device</h3>
+      <p>Server-assigned IDs are a network round-trip you don't have. Use UUIDs (or a ULID-style sortable variant) generated locally. The server stores yours and optionally returns its own; the client treats the device-generated ID as canonical for joining child records.</p>
+
+      <h3>2. Soft state, not hard state</h3>
+      <p>Every row has a <code>sync_state</code> column with values like <code>PENDING</code>, <code>SYNCED</code>, <code>FAILED_PERMANENT</code>. The UI can read this and show subtle indicators ("uploading…" / "saved"). Users on flaky networks tolerate latency much better when they can see what's happening.</p>
+
+      <h3>3. Conflict resolution before you need it</h3>
+      <p>Decide up front: is the client always right, or the server, or do you merge? At Carnival, for boarding state the device was authoritative — once a passenger was checked in on a tablet, that fact stuck even if the server briefly disagreed. For passenger profile data, the server won. Pick per entity, document it, write the test.</p>
+
+      <h3>4. Idempotent endpoints</h3>
+      <p>If you submit the same row twice (because the network blinked between request and response), the server should compute the same result. That means including a stable client-side request ID in every mutation and the backend deduping on it. Without this, retries create duplicates.</p>
+
+      <h3>5. Bounded queues</h3>
+      <p>"Sync everything pending" is a trap when "everything" is two days of offline operations. Bound the batch (e.g. 50 rows per worker invocation) so the device doesn't lock up on the first sync after a long outage. Pagination on the client side is just as important as on the server.</p>
+
+      <h2>What this gets you</h2>
+      <ul class="post-ul">
+        <li>The UI is instantaneous. Tapping Submit feels native, not laggy.</li>
+        <li>The boarding line keeps moving when the gateway router reboots.</li>
+        <li>You can run a full QA pass with airplane mode toggled mid-flow and the app still behaves.</li>
+        <li>Battery is better — bursts of network rather than continuous polling.</li>
+      </ul>
+
+      <h2>Where I'd reach for it</h2>
+      <p>Healthcare apps with PHI capture (the patient is in front of you, the chart can sync later). Field service apps for technicians on customer sites. Retail in-store tools where the corporate VPN is intermittent. Any time the user is offline more than 1% of the day, treat offline-first as the default and online-only as the exception.</p>
+
+      <h2>Bottom line</h2>
+      <p>Offline-first isn't a library. It's a small set of rules: local DB is truth, every write is async, every entity has a sync state, every endpoint is idempotent, every conflict has a documented resolution. Apply them and the network becomes a feature instead of a single point of failure.</p>
+
+      <footer class="post-foot">
+        <p class="post-foot__bio">By <strong>Christopher Renshaw</strong> — Senior Mobile Software Engineer based in Miami, FL. Led the Android team at Carnival Cruise Line (2024 – 2025) shipping the SEA_ID, MBARK, and EZ Board apps deployed across 20+ ships. Same offline-first principles applied earlier at UnitedHealth Group's Level2 for clinical-grade glucose data.</p>
+        <p class="post-foot__cta">
+          <a href="../../index.html#contact">Hire me for senior mobile engineering ↗</a>
+          <a href="../index.html">All notes ↗</a>
+        </p>
+      </footer>
+    </article>
+
+    <aside class="post-related" aria-label="Related notes">
+      <p class="post-kicker">Read next</p>
+      <ul>
+        <li><a href="../realtime-trading-android-fintech/index.html">Real-time trading on Android: lessons from Schwab Mobile</a></li>
+        <li><a href="../dexcom-g6-android-backfill/index.html">Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence</a></li>
+      </ul>
+    </aside>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence — Christopher Renshaw</title>
+  <meta name="description" content="The Dexcom G6 transmitter is a small, picky BLE peripheral. It needs an authenticated session, dumps three hours of EGV history on connect, and then sends one reading every five minutes. Here's how we shipped clinical-grade glucose streaming on Android at Level2." />
+  <meta name="keywords" content="Dexcom G6 Android, Dexcom CGM BLE, Android continuous glucose monitor, F8083532 Dexcom UUID, EGV backfill, Dexcom auth challenge, Level2 UnitedHealth, Kotlin BLE Dexcom" />
+  <meta name="author" content="Christopher Renshaw" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="canonical" href="https://crickshaw.dev/notes/dexcom-g6-android-backfill/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence" />
+  <meta property="og:description" content="The integration shape behind clinical-grade Dexcom CGM streaming at Level2 — auth, backfill, offline buffering, and why the cadence matters." />
+  <meta property="og:url" content="https://crickshaw.dev/notes/dexcom-g6-android-backfill/" />
+  <meta property="og:image" content="https://crickshaw.dev/images/profile.png" />
+  <meta property="article:published_time" content="2026-04-12" />
+  <meta property="article:author" content="Christopher Renshaw" />
+  <meta property="article:tag" content="Android" />
+  <meta property="article:tag" content="BLE" />
+  <meta property="article:tag" content="Dexcom" />
+  <meta property="article:tag" content="Healthcare" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Streaming Dexcom G6 to Android" />
+  <meta name="twitter:description" content="Auth, backfill, 5-min cadence, offline-first. The Level2 integration shape." />
+  <meta name="twitter:image" content="https://crickshaw.dev/images/profile.png" />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070708'/%3E%3Ctext x='50%25' y='54%25' font-family='Inter,Arial,sans-serif' font-size='34' font-weight='700' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'%3ECR%3C/text%3E%3C/svg%3E" />
+  <link rel="manifest" href="../../site.webmanifest" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence",
+    "description": "How we shipped clinical-grade Dexcom CGM streaming on Android at Level2 — vendor service UUID, transmitter authentication, EGV backfill bursts, 5-minute live cadence, and offline-first buffering for zero data loss.",
+    "datePublished": "2026-04-12",
+    "dateModified": "2026-04-12",
+    "wordCount": 1180,
+    "keywords": "Dexcom G6 Android, BLE, EGV backfill, Level2, healthcare",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Renshaw",
+      "url": "https://crickshaw.dev/"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Christopher Renshaw"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://crickshaw.dev/notes/dexcom-g6-android-backfill/"
+    },
+    "image": "https://crickshaw.dev/images/profile.png"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://crickshaw.dev/" },
+      { "@type": "ListItem", "position": 2, "name": "Notes", "item": "https://crickshaw.dev/notes/" },
+      { "@type": "ListItem", "position": 3, "name": "Dexcom G6 Android backfill" }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-grid"></div>
+  </div>
+
+  <div class="post-shell">
+    <header class="post-top">
+      <a href="../../index.html" class="post-back">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Christopher Renshaw
+      </a>
+      <a href="../index.html" class="post-crumb post-crumb--link">Notes</a>
+    </header>
+
+    <article class="post">
+      <p class="post-kicker">Field note · Healthcare · BLE</p>
+      <h1 class="post-title">Streaming Dexcom G6 to Android: <span class="accent">backfill, auth, and the 5-minute cadence.</span></h1>
+      <p class="post-meta">
+        <time datetime="2026-04-12">April 12, 2026</time>
+        <span>·</span><span>11 min read</span>
+        <span>·</span><span>by Christopher Renshaw</span>
+      </p>
+
+      <p class="post-lede">The Dexcom G6 is a great sensor and a picky BLE peripheral. Treat it like a stock-standard GATT device and you'll lose readings, miss the auth handshake, or get stuck waiting for a measurement that's actually five minutes away. Here's the integration shape we used at Level2 — UnitedHealth Group's Type 2 diabetes platform — to ship clinical-grade glucose streaming with no data loss.</p>
+
+      <h2>The protocol shape</h2>
+      <p>A G6 transmitter exposes a vendor-specific service rather than the SIG-defined CGM Service (<code>0x181F</code>). The service UUID and its three relevant characteristics are public knowledge from the xDrip+ project:</p>
+      <ul class="post-ul">
+        <li><strong>Communication service</strong> — <code>F8083532-849E-531C-C594-30F1F86A4EA5</code></li>
+        <li><strong>Control</strong> — <code>F8083534-…</code> (commands in, status out)</li>
+        <li><strong>Authentication</strong> — <code>F8083535-…</code> (challenge / response)</li>
+        <li><strong>Backfill</strong> — <code>F8083538-…</code> (historical EGV records)</li>
+      </ul>
+      <p>You scan with a service-UUID filter on the comm service. Once you connect, the dance is: <em>discover services → request MTU → authenticate → enable notifications → request backfill → live notify every 5 minutes</em>.</p>
+
+      <h2>Authentication is mandatory</h2>
+      <p>Before the transmitter will tell you anything useful, it expects a cryptographic challenge bound to the transmitter's serial number (printed on the sensor packaging — six or seven alphanumeric characters). The flow, per the publicly documented G5/G6 protocol:</p>
+      <ol class="post-ol">
+        <li>App writes an 8-byte authentication request to the Auth characteristic.</li>
+        <li>Transmitter responds with an 8-byte challenge.</li>
+        <li>App returns <strong>AES-128-ECB</strong> of the challenge, using a 16-byte key derived from the serial number.</li>
+        <li>Transmitter writes <code>status=ok</code> back, or disconnects.</li>
+      </ol>
+      <p>Skip this and your <code>setCharacteristicNotification(measurement, true)</code> will silently never fire. Worst possible failure mode for a clinical product — looks fine in QA, no alarms in production, just zero data.</p>
+
+      <h2>Backfill: the burst before the cadence</h2>
+      <p>Once authenticated, the very first thing you do is ask the transmitter for backfill. The G6 holds about three hours of historical EGV (Estimated Glucose Value) records on-device. On connect, you ask for everything since your last persisted sequence number and the transmitter blasts you 24-ish 9-byte records in a few hundred milliseconds, one per BLE notification.</p>
+
+      <pre class="code-pane is-active"><code><span class="t-c">// Skeleton — actual record parsing omitted.</span>
+<span class="t-k">suspend fun</span> <span class="t-f">backfillSince</span>(lastSeq: <span class="t-t">Int</span>): <span class="t-t">List</span>&lt;<span class="t-t">EgvRecord</span>&gt; = <span class="t-f">withConnection</span> { gatt -&gt;
+    <span class="t-k">val</span> req = <span class="t-t">BackfillRequest</span>(lastSeq, lookbackMinutes = <span class="t-k">180</span>)
+    gatt.<span class="t-f">writeCharacteristic</span>(controlChar, req.<span class="t-f">encode</span>())
+
+    <span class="t-c">// Drain backfill notifications until we get the terminator.</span>
+    <span class="t-k">val</span> records = <span class="t-f">mutableListOf</span>&lt;<span class="t-t">EgvRecord</span>&gt;()
+    backfillNotifications
+        .<span class="t-f">takeWhile</span> { !it.<span class="t-f">isTerminator</span>() }
+        .<span class="t-f">collect</span> { records += <span class="t-t">EgvRecord</span>.<span class="t-f">parse</span>(it.value) }
+
+    db.<span class="t-f">insertAll</span>(records.<span class="t-f">distinctBy</span> { it.seq })
+    records
+}</code></pre>
+
+      <p>Two non-obvious things:</p>
+      <ul class="post-ul">
+        <li><strong>Persist by sequence number, not timestamp.</strong> Phone clocks drift; the transmitter's monotonic counter does not. Dedup on <code>seq</code>.</li>
+        <li><strong>Burst hits your DB hard.</strong> 24 inserts in 200 ms is fine for Room, but if you're flowing each record through reactive streams to the UI you'll thrash recompositions. Batch the persist, then emit one "history updated" tick.</li>
+      </ul>
+
+      <h2>The 5-minute live cadence</h2>
+      <p>After backfill, you sit on the live measurement notification. <strong>One reading, every five minutes</strong> — not five seconds. That cadence is fixed by the sensor hardware. Anyone showing you a Dexcom log with sub-minute reads is showing you a backfill burst, a simulator, or someone else's data.</p>
+      <p>What this means for the app:</p>
+      <ul class="post-ul">
+        <li><strong>UI freshness is misleading.</strong> The "live" reading you display can be up to 5 minutes old. Show the timestamp, always. Color-code if older than 7 minutes.</li>
+        <li><strong>Aggressive reconnect is wasteful.</strong> If the link is healthy, you have ~290 seconds of nothing-to-do between notifications. The G6 already negotiates a loose connection interval (typically near the upper end of the spec) because it rarely has anything to say; don't fight it by forcing aggressive parameters on your end.</li>
+        <li><strong>Reconnect strategy matters more than read strategy.</strong> The expensive event isn't the read — it's the connect. Optimize for fast, reliable reconnect, not for read latency.</li>
+      </ul>
+
+      <h2>Offline-first is non-negotiable</h2>
+      <p>Level2 patients carried the app to grocery stores, on flights, into elevators, into rural areas. The cloud backend wasn't allowed to be the source of truth. Reading flow:</p>
+      <ol class="post-ol">
+        <li>BLE notification arrives → parse → write to Room (<code>egv_readings</code> table).</li>
+        <li>WorkManager job, constrained on network, syncs unsent rows to the backend.</li>
+        <li>UI binds to a Room <code>Flow</code>, not the network. Network is purely a sink.</li>
+      </ol>
+      <p>This is the boring, obvious answer. It's also the one a surprising number of healthcare apps don't ship. The shape that matters: <strong>the BLE callback never blocks on the network.</strong> Persist locally, return immediately, let WorkManager handle the rest.</p>
+
+      <h2>Failure modes worth handling</h2>
+      <ul class="post-ul">
+        <li><strong>Transmitter end-of-life.</strong> G6 transmitters expire at 90 days. The app needs to surface this proactively, not after readings stop.</li>
+        <li><strong>Sensor warmup.</strong> First two hours of a new sensor session, readings can be noisy or absent. Don't alarm.</li>
+        <li><strong>RSSI degradation.</strong> Below -85 dBm we'd start buffering more aggressively and skip optional reads.</li>
+        <li><strong>Bond loss.</strong> If Android forgets the bond, the next auth attempt fails silently. Detect, prompt the user, re-bond.</li>
+      </ul>
+
+      <h2>Bottom line</h2>
+      <p>Treat the G6 as what it is: a sensor with a mandatory auth handshake, a one-shot backfill on connect, and a strict 5-minute live cadence. Persist by sequence number, do all I/O off the BLE callback, and assume the network isn't there. Get those four things right and the rest of the integration is just data plumbing.</p>
+
+      <footer class="post-foot">
+        <p class="post-foot__bio">By <strong>Christopher Renshaw</strong> — Senior Mobile Software Engineer. Mobile Lead Developer at UnitedHealth Group R&amp;D (2017 – 2020) for Level2, the Type 2 diabetes platform that shipped to 230,000+ members across 27 states.</p>
+        <p class="post-foot__cta">
+          <a href="../../index.html#contact">Hire me for BLE / mobile engineering ↗</a>
+          <a href="../index.html">All notes ↗</a>
+        </p>
+      </footer>
+    </article>
+
+    <aside class="post-related" aria-label="Related notes">
+      <p class="post-kicker">Read next</p>
+      <ul>
+        <li><a href="../android-ble-gatt-error-133/index.html">Surviving GATT_ERROR 133 on Android BLE</a></li>
+        <li><a href="../embedded-android-smart-console/index.html">Embedded Android: shipping a 10-inch console used in $500M of equipment</a></li>
+      </ul>
+    </aside>
+  </div>
+
+</body>
+</html>

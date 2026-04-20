@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Notes — Christopher Renshaw | Android, iOS, BLE &amp; Embedded</title>
+  <meta name="description" content="Field notes on shipping native mobile apps that talk to hardware — Android BLE, GATT, Core Bluetooth, firmware OTA, embedded Android, and offline-first sync. Written by Christopher Renshaw, Senior Mobile Software Engineer (15+ years)." />
+  <meta name="keywords" content="Android BLE blog, Android GATT, Dexcom CGM Android, embedded Android, BLE GATT_ERROR 133, Core Bluetooth, firmware OTA Android, mobile engineering blog" />
+  <meta name="author" content="Christopher Renshaw" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="canonical" href="https://crickshaw.dev/notes/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Notes — Christopher Renshaw" />
+  <meta property="og:description" content="Field notes on Android BLE, GATT, Core Bluetooth, firmware OTA, embedded Android, and offline-first sync." />
+  <meta property="og:url" content="https://crickshaw.dev/notes/" />
+  <meta property="og:image" content="https://crickshaw.dev/images/profile.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Notes — Christopher Renshaw" />
+  <meta name="twitter:description" content="Field notes on Android BLE, GATT, Core Bluetooth, firmware OTA, embedded Android." />
+  <meta name="twitter:image" content="https://crickshaw.dev/images/profile.png" />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070708'/%3E%3Ctext x='50%25' y='54%25' font-family='Inter,Arial,sans-serif' font-size='34' font-weight='700' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'%3ECR%3C/text%3E%3C/svg%3E" />
+  <link rel="manifest" href="../site.webmanifest" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Notes — Christopher Renshaw",
+    "url": "https://crickshaw.dev/notes/",
+    "description": "Field notes on shipping native mobile apps that talk to hardware.",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Renshaw",
+      "url": "https://crickshaw.dev/"
+    },
+    "blogPost": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Offline-first mobile sync — the pattern that survived ship Wi-Fi",
+        "url": "https://crickshaw.dev/notes/offline-first-mobile-sync/",
+        "datePublished": "2026-04-22"
+      },
+      {
+        "@type": "BlogPosting",
+        "headline": "Real-time trading on Android: lessons from Schwab Mobile",
+        "url": "https://crickshaw.dev/notes/realtime-trading-android-fintech/",
+        "datePublished": "2026-04-20"
+      },
+      {
+        "@type": "BlogPosting",
+        "headline": "Embedded Android: shipping a 10-inch console used in $500M of equipment",
+        "url": "https://crickshaw.dev/notes/embedded-android-smart-console/",
+        "datePublished": "2026-04-18"
+      },
+      {
+        "@type": "BlogPosting",
+        "headline": "Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence",
+        "url": "https://crickshaw.dev/notes/dexcom-g6-android-backfill/",
+        "datePublished": "2026-04-12"
+      },
+      {
+        "@type": "BlogPosting",
+        "headline": "Surviving GATT_ERROR 133 on Android BLE",
+        "url": "https://crickshaw.dev/notes/android-ble-gatt-error-133/",
+        "datePublished": "2026-04-08"
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://crickshaw.dev/" },
+      { "@type": "ListItem", "position": 2, "name": "Notes", "item": "https://crickshaw.dev/notes/" }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-grid"></div>
+  </div>
+
+  <div class="post-shell">
+    <header class="post-top">
+      <a href="../index.html" class="post-back">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Christopher Renshaw
+      </a>
+      <span class="post-crumb">Notes</span>
+    </header>
+
+    <main class="notes-index">
+      <header class="notes-index__header">
+        <p class="post-kicker">Field notes</p>
+        <h1>Notes from shipping mobile apps that <span class="accent">talk to hardware.</span></h1>
+        <p class="post-lede">Practical write-ups on Android BLE, GATT, Core Bluetooth, firmware OTA, embedded Android, and the things that go wrong when phones meet real-world hardware. Written from production experience — Level2 (Dexcom CGM), Octane Fitness Smart Console, Carnival shipboard apps.</p>
+      </header>
+
+      <ol class="post-list">
+        <li class="post-card">
+          <a href="offline-first-mobile-sync/index.html">
+            <p class="post-meta">
+              <time datetime="2026-04-22">Apr 22, 2026</time>
+              <span>·</span>
+              <span>9 min read</span>
+              <span>·</span>
+              <span>Android · iOS · Architecture</span>
+            </p>
+            <h2>Offline-first mobile sync — the pattern that survived ship Wi-Fi</h2>
+            <p>Most mobile apps are network-first. Offline-first inverts the relationship: local DB is truth, network is a sink. Five rules — local IDs, soft state, conflict resolution, idempotent endpoints, bounded queues — and the architecture I shipped at Carnival to keep boarding moving when ship Wi-Fi disappeared.</p>
+            <span class="post-card__cta">Read the post →</span>
+          </a>
+        </li>
+
+        <li class="post-card">
+          <a href="realtime-trading-android-fintech/index.html">
+            <p class="post-meta">
+              <time datetime="2026-04-20">Apr 20, 2026</time>
+              <span>·</span>
+              <span>10 min read</span>
+              <span>·</span>
+              <span>Android · iOS · Fintech</span>
+            </p>
+            <h2>Real-time trading on Android: lessons from Schwab Mobile</h2>
+            <p>A trade ticket looks simple — a symbol, a quantity, a Submit button. Everything that makes it actually work — quote streaming, order state machines, latency budgets, biometric auth, idempotency keys — happens behind that surface. The shape of what we shipped on Schwab Mobile (1.8M+ Android installs).</p>
+            <span class="post-card__cta">Read the post →</span>
+          </a>
+        </li>
+
+        <li class="post-card">
+          <a href="android-ble-gatt-error-133/index.html">
+            <p class="post-meta">
+              <time datetime="2026-04-08">Apr 8, 2026</time>
+              <span>·</span>
+              <span>9 min read</span>
+              <span>·</span>
+              <span>Android · BLE · GATT</span>
+            </p>
+            <h2>Surviving GATT_ERROR 133 on Android BLE</h2>
+            <p>The most infamous error code in the Android Bluetooth stack means almost nothing on its own — but it eats production apps alive. Here's the actual cause, the retry pattern that kept the Octane Smart Console fleet stable across commercial gyms worldwide, and the ConnectionGate state machine that finally made the symptom go away.</p>
+            <span class="post-card__cta">Read the post →</span>
+          </a>
+        </li>
+
+        <li class="post-card">
+          <a href="dexcom-g6-android-backfill/index.html">
+            <p class="post-meta">
+              <time datetime="2026-04-12">Apr 12, 2026</time>
+              <span>·</span>
+              <span>11 min read</span>
+              <span>·</span>
+              <span>Android · BLE · Healthcare</span>
+            </p>
+            <h2>Streaming Dexcom G6 to Android: backfill, auth, and the 5-minute cadence</h2>
+            <p>Dexcom G6 doesn't just push glucose readings — it expects an authenticated session, hands you 3 hours of historical EGV records on connect, and then drops one notification every 5 minutes. Here's the integration shape we used at Level2 to ship clinical-grade data with zero loss.</p>
+            <span class="post-card__cta">Read the post →</span>
+          </a>
+        </li>
+
+        <li class="post-card">
+          <a href="embedded-android-smart-console/index.html">
+            <p class="post-meta">
+              <time datetime="2026-04-18">Apr 18, 2026</time>
+              <span>·</span>
+              <span>10 min read</span>
+              <span>·</span>
+              <span>Embedded Android · BLE · OTA</span>
+            </p>
+            <h2>Embedded Android: shipping a 10-inch console used in $500M of equipment</h2>
+            <p>What changes when an Android app stops being a phone app and becomes the operating system on a fitness machine? At Octane, we migrated the Smart Console from an Angular hybrid to fully native Android (Kotlin + NDK). These are the architectural decisions that survived production.</p>
+            <span class="post-card__cta">Read the post →</span>
+          </a>
+        </li>
+      </ol>
+
+      <footer class="notes-foot">
+        <p>Written by <strong>Christopher Renshaw</strong> — Senior Mobile Software Engineer · Miami, FL.</p>
+        <p>Available for senior Android / iOS / BLE-IoT engagements. <a href="../index.html#contact">Get in touch ↗</a></p>
+      </footer>
+    </main>
+  </div>
+
+</body>
+</html>

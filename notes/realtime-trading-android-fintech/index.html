@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Real-time trading on Android: lessons from Schwab Mobile — Christopher Renshaw</title>
+  <meta name="description" content="What it actually takes to ship a real-time trade ticket on Android — quote streaming, order types, latency budgets, biometric auth, and the patterns that make a Fortune 500 fintech app trustworthy on a 4G connection." />
+  <meta name="keywords" content="Android trading app, real-time market data Android, Schwab Mobile, Kotlin fintech, biometric authentication Android, mobile fintech architecture, MVVM trading UI, Android streaming quotes" />
+  <meta name="author" content="Christopher Renshaw" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#070708" />
+  <link rel="canonical" href="https://crickshaw.dev/notes/realtime-trading-android-fintech/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Real-time trading on Android: lessons from Schwab Mobile" />
+  <meta property="og:description" content="Quote streaming, order types, latency budgets, biometric auth — the architecture behind a Fortune 500 mobile trading app." />
+  <meta property="og:url" content="https://crickshaw.dev/notes/realtime-trading-android-fintech/" />
+  <meta property="og:image" content="https://crickshaw.dev/images/profile.png" />
+  <meta property="article:published_time" content="2026-04-20" />
+  <meta property="article:author" content="Christopher Renshaw" />
+  <meta property="article:tag" content="Android" />
+  <meta property="article:tag" content="iOS" />
+  <meta property="article:tag" content="Fintech" />
+  <meta property="article:tag" content="Kotlin" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Real-time trading on Android: Schwab lessons" />
+  <meta name="twitter:description" content="The architecture behind a Fortune 500 mobile trading app." />
+  <meta name="twitter:image" content="https://crickshaw.dev/images/profile.png" />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070708'/%3E%3Ctext x='50%25' y='54%25' font-family='Inter,Arial,sans-serif' font-size='34' font-weight='700' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'%3ECR%3C/text%3E%3C/svg%3E" />
+  <link rel="manifest" href="../../site.webmanifest" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Real-time trading on Android: lessons from Schwab Mobile",
+    "description": "What it takes to ship a real-time trade ticket on Android — quote streaming architecture, order type handling, latency budgets, biometric authentication, and the patterns that make a Fortune 500 fintech app trustworthy on a mobile network.",
+    "datePublished": "2026-04-20",
+    "dateModified": "2026-04-20",
+    "wordCount": 1090,
+    "keywords": "Android, iOS, fintech, Kotlin, real-time market data, Schwab",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Renshaw",
+      "url": "https://crickshaw.dev/"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Christopher Renshaw"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://crickshaw.dev/notes/realtime-trading-android-fintech/"
+    },
+    "image": "https://crickshaw.dev/images/profile.png"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://crickshaw.dev/" },
+      { "@type": "ListItem", "position": 2, "name": "Notes", "item": "https://crickshaw.dev/notes/" },
+      { "@type": "ListItem", "position": 3, "name": "Real-time trading on Android" }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-grid"></div>
+  </div>
+
+  <div class="post-shell">
+    <header class="post-top">
+      <a href="../../index.html" class="post-back">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        Christopher Renshaw
+      </a>
+      <a href="../index.html" class="post-crumb post-crumb--link">Notes</a>
+    </header>
+
+    <article class="post">
+      <p class="post-kicker">Field note · Android · iOS · Fintech</p>
+      <h1 class="post-title">Real-time trading on Android: <span class="accent">lessons from Schwab Mobile.</span></h1>
+      <p class="post-meta">
+        <time datetime="2026-04-20">April 20, 2026</time>
+        <span>·</span><span>10 min read</span>
+        <span>·</span><span>by Christopher Renshaw</span>
+      </p>
+
+      <p class="post-lede">A trade ticket looks simple. A symbol field, a quantity, a buy/sell toggle, a Submit button. Everything that makes it actually work — live quotes, multiple order types, market-hours logic, encrypted transport, biometric auth, and the assumption that the user is on a flaky 4G connection in a parking lot — happens behind that surface. Here's the shape of what we shipped at Schwab.</p>
+
+      <h2>The latency budget you don't get to negotiate</h2>
+      <p>A trader expects the displayed bid/ask to update at least once a second on an active symbol, and they expect the order confirmation to land in under 1.5 seconds after they tap Submit. Both are non-negotiable: traders will leave a brokerage over either one. That gives you a hard budget — pick any one of (network round-trip, JSON parse, view recomposition, animation frame) and assume it has 100 ms.</p>
+      <p>Two consequences shape the whole stack:</p>
+      <ul class="post-ul">
+        <li><strong>You can't render the network.</strong> The UI binds to a local model. The network feeds the model. Any time the UI awaits the network directly, you'll miss frames during a fast market.</li>
+        <li><strong>You can't allocate per tick.</strong> A streaming quote feed for ten symbols at 4 ticks/sec is 40 events/sec. Per-tick object allocation thrashes the heap. Quote rows are pooled and mutated in place.</li>
+      </ul>
+
+      <h2>The streaming layer</h2>
+      <p>Real-time quotes don't come over REST. The wire is a long-lived persistent connection — historically WebSockets, occasionally a server-sent stream — and the server pushes deltas. The client subscribes to a watchlist and the server confirms with a snapshot, then sends partial updates per tick.</p>
+      <p>Two patterns that matter on mobile:</p>
+      <ul class="post-ul">
+        <li><strong>Subscribe to what's visible.</strong> The watchlist screen shows 8 rows; the stream subscribes to those 8 symbols. Scroll changes the subscription. Background tabs unsubscribe. This isn't an optimization — it's the difference between a phone that lasts the trading day and one that needs charging at lunch.</li>
+        <li><strong>Coalesce updates.</strong> Don't post every tick to the main thread. Buffer ticks for the last 100 ms, apply them in a single recomposition pass. Charts and watchlists thank you.</li>
+      </ul>
+
+      <pre class="code-pane is-active"><code><span class="t-c">// Coalesced quote feed — emits at most one update per symbol per frame window.</span>
+<span class="t-k">class</span> <span class="t-t">QuoteFeed</span>(<span class="t-k">private val</span> ws: <span class="t-t">QuoteSocket</span>) {
+    <span class="t-k">val</span> quotes: <span class="t-t">SharedFlow</span>&lt;<span class="t-t">Map</span>&lt;<span class="t-t">Symbol</span>, <span class="t-t">Quote</span>&gt;&gt; = ws.ticks
+        .<span class="t-f">scan</span>(<span class="t-f">emptyMap</span>&lt;<span class="t-t">Symbol</span>, <span class="t-t">Quote</span>&gt;()) { acc, tick -&gt;
+            acc + (tick.symbol <span class="t-k">to</span> acc[tick.symbol]?.<span class="t-f">apply</span>(tick) ?: <span class="t-t">Quote</span>(tick))
+        }
+        .<span class="t-f">sample</span>(<span class="t-k">100.</span>milliseconds)
+        .<span class="t-f">flowOn</span>(<span class="t-t">Dispatchers</span>.<span class="t-t">Default</span>)
+        .<span class="t-f">shareIn</span>(scope, <span class="t-t">SharingStarted</span>.<span class="t-t">WhileSubscribed</span>(), replay = <span class="t-k">1</span>)
+
+    <span class="t-k">suspend fun</span> <span class="t-f">subscribe</span>(symbols: <span class="t-t">Set</span>&lt;<span class="t-t">Symbol</span>&gt;) = ws.<span class="t-f">subscribe</span>(symbols)
+}</code></pre>
+
+      <h2>The order ticket is a state machine</h2>
+      <p>"Buy 100 AAPL at market" hides a small state machine. Validations are layered: client-side (positive quantity, valid symbol, market-hours awareness for stop orders), server-side (account funds, day-trade-pattern check, regulatory pre-trade), and broker-side (acceptance, partial fill, full fill, reject).</p>
+      <p>The mistake to avoid: trying to model "submitting" as a single boolean. The actual states a ticket flows through are roughly:</p>
+      <ol class="post-ol">
+        <li><strong>Drafting</strong> — user can edit fields freely.</li>
+        <li><strong>Validating</strong> — client check passes, awaiting server pre-trade.</li>
+        <li><strong>Confirming</strong> — server accepted; user sees the disclosure / confirm screen.</li>
+        <li><strong>Submitted</strong> — order acknowledged, awaiting broker.</li>
+        <li><strong>Working / partial / filled / rejected</strong> — broker terminal states.</li>
+      </ol>
+      <p>Every screen that interacts with the ticket binds to that state, not to ad-hoc booleans. The reward is no double submissions, no impossible UI states, and a much easier QA story.</p>
+
+      <h2>Biometric auth — and what it doesn't do</h2>
+      <p>Face / fingerprint unlock is table stakes in fintech. It's also frequently misimplemented: developers treat the biometric prompt as <em>authentication</em>, when it's actually <em>authorization to release a stored secret</em>. The authentication still happens between your stored token and the server.</p>
+      <p>The pattern that holds up to a security review:</p>
+      <ul class="post-ul">
+        <li>Login generates a refresh token; refresh token gets wrapped with a key from <code>Keystore</code> bound to <code>setUserAuthenticationRequired(true)</code>.</li>
+        <li>Biometric prompt unlocks the key. Failure means the wrapped token stays sealed.</li>
+        <li>Session timeout after N minutes of inactivity always falls back to PIN/password — biometric alone shouldn't extend a session indefinitely.</li>
+        <li>On a new device or after enrolling a new fingerprint, the wrapped token is invalidated. The user logs in again. Don't try to silently re-wrap; that's a regression of your security posture.</li>
+      </ul>
+
+      <h2>Network — the layer that bites you in production</h2>
+      <p>Three small things saved us repeatedly:</p>
+      <ol class="post-ol">
+        <li><strong>Idempotency keys on order submission.</strong> The user double-tapped Submit because they didn't see the spinner. Without an idempotency key, you book two orders. With it, the second is a no-op.</li>
+        <li><strong>Aggressive client-side timeouts on order paths.</strong> 5 seconds, then surface "we don't know the status of your order" and link to Order Status. Never sit on a spinner for 30 seconds during a fast market.</li>
+        <li><strong>Always reconcile on resume.</strong> When the app comes back to foreground, fetch live order status before showing any cached state. Stale order data in fintech is worse than blank.</li>
+      </ol>
+
+      <h2>Bottom line</h2>
+      <p>A real-time trading app is fundamentally a UI bound to a streaming backend, with a state machine for orders and a security model that assumes the device is hostile. None of the individual pieces are exotic — but the combination is unforgiving, and the patterns above are the ones I'd reach for first if I were building it again tomorrow.</p>
+
+      <footer class="post-foot">
+        <p class="post-foot__bio">By <strong>Christopher Renshaw</strong> — Senior Mobile Software Engineer based in Miami, FL. Built core features for Schwab Mobile (Android &amp; iOS, 1.8M+ Android installs) including the trade ticket, real-time quote streaming, charting, and biometric auth — plus iOS feature work on Ameriprise Financial's wealth management app.</p>
+        <p class="post-foot__cta">
+          <a href="../../index.html#contact">Hire me for senior mobile engineering ↗</a>
+          <a href="../index.html">All notes ↗</a>
+        </p>
+      </footer>
+    </article>
+
+    <aside class="post-related" aria-label="Related notes">
+      <p class="post-kicker">Read next</p>
+      <ul>
+        <li><a href="../offline-first-mobile-sync/index.html">Offline-first mobile sync — the pattern that survived ship Wi-Fi</a></li>
+        <li><a href="../android-ble-gatt-error-133/index.html">Surviving GATT_ERROR 133 on Android BLE</a></li>
+      </ul>
+    </aside>
+  </div>
+
+</body>
+</html>

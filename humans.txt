@@ -1,0 +1,16 @@
+/* TEAM */
+    Engineer & Author: Christopher Renshaw
+    Site:    https://crickshaw.dev
+    Email:   crickshaw78 [at] gmail [dot] com
+    From:    Miami, Florida, USA
+    Stack Overflow: droid-chris
+
+/* THANKS */
+    Every developer whose Stack Overflow answer saved a build —
+    paid forward whenever I can.
+
+/* SITE */
+    Last update:    2026-04
+    Standards:      HTML5, CSS3, ES2020
+    Components:     Vanilla — no framework, no tracker
+    Software:       Hand-written
